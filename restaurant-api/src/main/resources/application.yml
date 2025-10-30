@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  
+spring:
+  application:
+    name: restaurant-booking-api
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+dgs:
+  graphql:
+    path: /graphql
+    schema-json:
+      enabled: true
+      path: /schema.json
+    graphiql:
+      enabled: true
+      path: /graphiql
+
+logging:
+  level:
+    edu.restaurant: DEBUG
+    org.springframework.web: INFO
