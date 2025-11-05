@@ -1,91 +1,84 @@
 package edu.restaurant.api.controllers;
 
-import edu.restaurant.api.assemblers.BookingModelAssembler;
 import edu.restaurant.api.services.BookingService;
 import edu.restaurant.contract.dto.*;
 import edu.restaurant.contract.endpoints.BookingApi;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.web.PagedResourcesAssembler;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
 public class BookingController implements BookingApi {
 
-    private final BookingService service;
-    private final BookingModelAssembler assembler;
-    private final PagedResourcesAssembler<BookingResponse> pagedAssembler;
+    private final BookingService bookingService;
 
-    public BookingController(BookingService service, BookingModelAssembler assembler,
-                            PagedResourcesAssembler<BookingResponse> pagedAssembler) {
-        this.service = service;
-        this.assembler = assembler;
-        this.pagedAssembler = pagedAssembler;
+    public BookingController(BookingService bookingService) {
+        this.bookingService = bookingService;
     }
 
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @Override
-    public ResponseEntity<EntityModel<BookingResponse>> createBooking(BookingRequest bookingRequest) {
-        BookingResponse created = service.create(bookingRequest);
-        EntityModel<BookingResponse> model = assembler.toModel(created);
-        return ResponseEntity.created(model.getRequiredLink("self").toUri()).body(model);
+    public ApiResponse<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest) {
+        return bookingService.create(bookingRequest);
     }
 
+    @GetMapping("/{id}")
     @Override
-    public EntityModel<BookingResponse> getBooking(Long id) {
-        return assembler.toModel(service.findById(id));
+    public ApiResponse<BookingResponse> getBooking(@PathVariable Long id) {
+        return bookingService.findById(id);
     }
 
+    @PutMapping("/{id}")
     @Override
-    public EntityModel<BookingResponse> updateBooking(Long id, BookingRequest bookingRequest) {
-        return assembler.toModel(service.update(id, bookingRequest));
+    public ApiResponse<BookingResponse> updateBooking(@PathVariable Long id, @Valid @RequestBody BookingRequest bookingRequest) {
+        return bookingService.update(id, bookingRequest);
     }
 
+    @PatchMapping("/{id}/cancel")
     @Override
-    public EntityModel<BookingResponse> cancelBooking(Long id) {
-        return assembler.toModel(service.cancelBooking(id));
+    public ApiResponse<BookingResponse> cancelBooking(@PathVariable Long id) {
+        return bookingService.cancelBooking(id);
     }
 
+    @PatchMapping("/{id}/confirm")
     @Override
-    public EntityModel<BookingResponse> confirmBooking(Long id) {
-        return assembler.toModel(service.confirmBooking(id));
+    public ApiResponse<BookingResponse> confirmBooking(@PathVariable Long id) {
+        return bookingService.confirmBooking(id);
     }
 
+    @PatchMapping("/{id}/complete")
     @Override
-    public EntityModel<BookingResponse> completeBooking(Long id) {
-        return assembler.toModel(service.completeBooking(id));
+    public ApiResponse<BookingResponse> completeBooking(@PathVariable Long id) {
+        return bookingService.completeBooking(id);
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Override
-    public void deleteBooking(Long id) {
-        service.delete(id);
+    public void deleteBooking(@PathVariable Long id) {
+        bookingService.delete(id);
     }
 
+    @GetMapping
     @Override
-    public PagedModel<EntityModel<BookingResponse>> getAllBookings(String guestName, String phoneNumber,
-                                                                     Long tableId, BookingStatus status,
-                                                                     int page, int size) {
-        PagedResponse<BookingResponse> pagedResponse = service.findAll(guestName, phoneNumber, tableId, status, page, size);
-        Page<BookingResponse> bookingPage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
-        );
-        return pagedAssembler.toModel(bookingPage, assembler);
+    public PagedResponse<ApiResponse<BookingResponse>> getAllBookings(
+            @RequestParam(required = false) String guestName,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return bookingService.findAll(guestName, phoneNumber, tableId, status, page, size);
     }
 
+    @GetMapping("/table/{tableId}")
     @Override
-    public PagedModel<EntityModel<BookingResponse>> getBookingsByTable(Long tableId, int page, int size) {
-        PagedResponse<BookingResponse> pagedResponse = service.findByTableId(tableId, page, size);
-        Page<BookingResponse> bookingPage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
-        );
-        return pagedAssembler.toModel(bookingPage, assembler);
+    public PagedResponse<ApiResponse<BookingResponse>> getBookingsByTable(
+            @PathVariable Long tableId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return bookingService.findByTableId(tableId, page, size);
     }
 }

@@ -5,6 +5,7 @@ import edu.restaurant.api.services.TableService;
 import edu.restaurant.contract.dto.*;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @DgsComponent
 public class TableDataFetcher {
@@ -22,12 +23,16 @@ public class TableDataFetcher {
             @InputArgument String location,
             @InputArgument int page,
             @InputArgument int size) {
-        return tableService.findAll(status, minCapacity, location, page, size);
+        PagedResponse<ApiResponse<TableResponse>> serviceResponse = tableService.findAll(status, minCapacity, location, page, size);
+        return new PagedResponse<>(
+                serviceResponse.getContent().stream().map(ApiResponse::getData).collect(Collectors.toList()),
+                serviceResponse.getPage()
+        );
     }
 
     @DgsQuery
     public TableResponse tableById(@InputArgument Long id) {
-        return tableService.findById(id);
+        return tableService.findById(id).getData();
     }
 
     @DgsQuery
@@ -37,7 +42,11 @@ public class TableDataFetcher {
             @InputArgument int page,
             @InputArgument int size) {
         LocalDateTime dt = LocalDateTime.parse(dateTime);
-        return tableService.findAvailableTables(dt, minCapacity, page, size);
+        PagedResponse<ApiResponse<TableResponse>> serviceResponse = tableService.findAvailableTables(dt, minCapacity, page, size);
+        return new PagedResponse<>(
+                serviceResponse.getContent().stream().map(ApiResponse::getData).collect(Collectors.toList()),
+                serviceResponse.getPage()
+        );
     }
 
     @DgsMutation
@@ -48,7 +57,7 @@ public class TableDataFetcher {
                 (String) input.get("location"),
                 TableStatus.valueOf((String) input.get("status"))
         );
-        return tableService.create(request);
+        return tableService.create(request).getData();
     }
 
     @DgsMutation
@@ -59,7 +68,7 @@ public class TableDataFetcher {
                 input.containsKey("location") ? (String) input.get("location") : null,
                 input.containsKey("status") ? TableStatus.valueOf((String) input.get("status")) : null
         );
-        return tableService.update(id, request);
+        return tableService.update(id, request).getData();
     }
 
     @DgsMutation
@@ -70,13 +79,13 @@ public class TableDataFetcher {
 
     @DgsMutation
     public TableResponse updateTableStatus(@InputArgument Long id, @InputArgument TableStatus status) {
-        TableResponse existing = tableService.findById(id);
+        TableResponse existing = tableService.findById(id).getData();
         TableRequest request = new TableRequest(
                 existing.tableNumber(),
                 existing.capacity(),
                 existing.location(),
                 status
         );
-        return tableService.update(id, request);
+        return tableService.update(id, request).getData();
     }
 }
