@@ -21,8 +21,8 @@ public class BookingService {
         this.tableService = tableService;
     }
 
-    public PagedResponse<ApiResponse<BookingResponse>> findAll(String guestName, String phoneNumber, Long tableId,
-                                                                 BookingStatus status, int page, int size) {
+    public PagedResponse<BookingResponse> findAll(String guestName, String phoneNumber, Long tableId,
+                                                   BookingStatus status, int page, int size) {
         List<BookingResponse> all = storage.bookings.values().stream()
                 .filter(b -> guestName == null || b.guestName().toLowerCase().contains(guestName.toLowerCase()))
                 .filter(b -> phoneNumber == null || b.phoneNumber().contains(phoneNumber))
@@ -32,22 +32,22 @@ public class BookingService {
 
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
-        List<ApiResponse<BookingResponse>> pageContent = all.subList(from, to).stream().map(ApiResponse::new).collect(Collectors.toList());
+        List<BookingResponse> pageContent = all.subList(from, to);
         long totalElements = all.size();
         long totalPages = (long) Math.ceil((double) totalElements / size);
 
         return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
     }
 
-    public ApiResponse<BookingResponse> findById(Long id) {
+    public BookingResponse findById(Long id) {
         BookingResponse booking = storage.bookings.get(id);
         if (booking == null) {
             throw new ResourceNotFoundException("Booking not found with id: " + id, "Booking", id);
         }
-        return new ApiResponse<>(booking);
+        return booking;
     }
 
-    public ApiResponse<BookingResponse> create(BookingRequest request) {
+    public BookingResponse create(BookingRequest request) {
         // Проверяем существование столика
         tableService.findById(request.tableId());
         
@@ -68,11 +68,11 @@ public class BookingService {
                 LocalDateTime.now()
         );
         storage.bookings.put(id, created);
-        return new ApiResponse<>(created);
+        return created;
     }
 
-    public ApiResponse<BookingResponse> update(Long id, BookingRequest request) {
-        BookingResponse existing = findById(id).getData();
+    public BookingResponse update(Long id, BookingRequest request) {
+        BookingResponse existing = findById(id);
         
         // Проверяем существование столика
         tableService.findById(request.tableId());
@@ -93,7 +93,7 @@ public class BookingService {
                 existing.createdAt()
         );
         storage.bookings.put(id, updated);
-        return new ApiResponse<>(updated);
+        return updated;
     }
 
     public void delete(Long id) {
@@ -101,20 +101,20 @@ public class BookingService {
         storage.bookings.remove(id);
     }
 
-    public ApiResponse<BookingResponse> confirmBooking(Long id) {
+    public BookingResponse confirmBooking(Long id) {
         return updateBookingStatus(id, BookingStatus.CONFIRMED);
     }
 
-    public ApiResponse<BookingResponse> cancelBooking(Long id) {
+    public BookingResponse cancelBooking(Long id) {
         return updateBookingStatus(id, BookingStatus.CANCELLED);
     }
 
-    public ApiResponse<BookingResponse> completeBooking(Long id) {
+    public BookingResponse completeBooking(Long id) {
         return updateBookingStatus(id, BookingStatus.COMPLETED);
     }
 
-    private ApiResponse<BookingResponse> updateBookingStatus(Long id, BookingStatus newStatus) {
-        BookingResponse existing = findById(id).getData();
+    private BookingResponse updateBookingStatus(Long id, BookingStatus newStatus) {
+        BookingResponse existing = findById(id);
         BookingResponse updated = new BookingResponse(
                 existing.id(),
                 existing.guestName(),
@@ -128,7 +128,7 @@ public class BookingService {
                 existing.createdAt()
         );
         storage.bookings.put(id, updated);
-        return new ApiResponse<>(updated);
+        return updated;
     }
 
     private void checkBookingConflict(Long tableId, LocalDateTime dateTime, Long excludeBookingId) {
@@ -147,14 +147,14 @@ public class BookingService {
         }
     }
 
-    public PagedResponse<ApiResponse<BookingResponse>> findByTableId(Long tableId, int page, int size) {
+    public PagedResponse<BookingResponse> findByTableId(Long tableId, int page, int size) {
         List<BookingResponse> all = storage.bookings.values().stream()
                 .filter(b -> b.tableId().equals(tableId))
                 .collect(Collectors.toList());
 
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
-        List<ApiResponse<BookingResponse>> pageContent = all.subList(from, to).stream().map(ApiResponse::new).collect(Collectors.toList());
+        List<BookingResponse> pageContent = all.subList(from, to);
         long totalElements = all.size();
         long totalPages = (long) Math.ceil((double) totalElements / size);
 

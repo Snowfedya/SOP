@@ -8,7 +8,7 @@ import jakarta.validation.Valid;
  */
 public interface TableApi {
 
-    ApiResponse<TableResponse> createTable(@Valid TableRequest tableRequest);
+    Object createTable(@Valid TableRequest tableRequest);
 
     ApiResponse<TableResponse> getTable(Long id);
 

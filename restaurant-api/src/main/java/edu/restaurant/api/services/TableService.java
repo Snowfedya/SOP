@@ -19,7 +19,7 @@ public class TableService {
         this.storage = storage;
     }
 
-    public PagedResponse<ApiResponse<TableResponse>> findAll(TableStatus status, Integer minCapacity, String location, int page, int size) {
+    public PagedResponse<TableResponse> findAll(TableStatus status, Integer minCapacity, String location, int page, int size) {
         List<TableResponse> all = storage.tables.values().stream()
                 .filter(t -> status == null || t.status() == status)
                 .filter(t -> minCapacity == null || t.capacity() >= minCapacity)
@@ -28,22 +28,22 @@ public class TableService {
 
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
-        List<ApiResponse<TableResponse>> pageContent = all.subList(from, to).stream().map(ApiResponse::new).collect(Collectors.toList());
+        List<TableResponse> pageContent = all.subList(from, to);
         long totalElements = all.size();
         long totalPages = (long) Math.ceil((double) totalElements / size);
 
         return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
     }
 
-    public ApiResponse<TableResponse> findById(Long id) {
+    public TableResponse findById(Long id) {
         TableResponse table = storage.tables.get(id);
         if (table == null) {
             throw new ResourceNotFoundException("Table not found with id: " + id, "Table", id);
         }
-        return new ApiResponse<>(table);
+        return table;
     }
 
-    public ApiResponse<TableResponse> create(TableRequest request) {
+    public TableResponse create(TableRequest request) {
         // Проверка на существование столика с таким номером
         boolean exists = storage.tables.values().stream()
                 .anyMatch(t -> t.tableNumber().equals(request.tableNumber()));
@@ -63,10 +63,10 @@ public class TableService {
                 request.status()
         );
         storage.tables.put(id, created);
-        return new ApiResponse<>(created);
+        return created;
     }
 
-    public ApiResponse<TableResponse> update(Long id, TableRequest request) {
+    public TableResponse update(Long id, TableRequest request) {
         findById(id); // Проверяем существование
 
         // Проверка на дубликат номера
@@ -87,7 +87,7 @@ public class TableService {
                 request.status()
         );
         storage.tables.put(id, updated);
-        return new ApiResponse<>(updated);
+        return updated;
     }
 
     public void delete(Long id) {
@@ -103,7 +103,7 @@ public class TableService {
         storage.tables.remove(id);
     }
 
-    public PagedResponse<ApiResponse<TableResponse>> findAvailableTables(LocalDateTime dateTime, Integer minCapacity, int page, int size) {
+    public PagedResponse<TableResponse> findAvailableTables(LocalDateTime dateTime, Integer minCapacity, int page, int size) {
         List<TableResponse> all = storage.tables.values().stream()
                 .filter(t -> t.status() == TableStatus.AVAILABLE)
                 .filter(t -> minCapacity == null || t.capacity() >= minCapacity)
@@ -112,7 +112,7 @@ public class TableService {
 
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
-        List<ApiResponse<TableResponse>> pageContent = all.subList(from, to).stream().map(ApiResponse::new).collect(Collectors.toList());
+        List<TableResponse> pageContent = all.subList(from, to);
         long totalElements = all.size();
         long totalPages = (long) Math.ceil((double) totalElements / size);
 

@@ -8,7 +8,6 @@ import graphql.schema.DataFetchingEnvironment;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @DgsComponent
 public class BookingDataFetcher {
@@ -29,16 +28,12 @@ public class BookingDataFetcher {
             @InputArgument BookingStatus status,
             @InputArgument int page,
             @InputArgument int size) {
-        PagedResponse<ApiResponse<BookingResponse>> serviceResponse = bookingService.findAll(guestName, phoneNumber, tableId, status, page, size);
-        return new PagedResponse<>(
-                serviceResponse.getContent().stream().map(ApiResponse::getData).collect(Collectors.toList()),
-                serviceResponse.getPage()
-        );
+        return bookingService.findAll(guestName, phoneNumber, tableId, status, page, size);
     }
 
     @DgsQuery
     public BookingResponse bookingById(@InputArgument Long id) {
-        return bookingService.findById(id).getData();
+        return bookingService.findById(id);
     }
 
     @DgsQuery
@@ -46,11 +41,7 @@ public class BookingDataFetcher {
             @InputArgument Long tableId,
             @InputArgument int page,
             @InputArgument int size) {
-        PagedResponse<ApiResponse<BookingResponse>> serviceResponse = bookingService.findByTableId(tableId, page, size);
-        return new PagedResponse<>(
-                serviceResponse.getContent().stream().map(ApiResponse::getData).collect(Collectors.toList()),
-                serviceResponse.getPage()
-        );
+        return bookingService.findByTableId(tableId, page, size);
     }
 
     @DgsMutation
@@ -64,12 +55,12 @@ public class BookingDataFetcher {
                 (Integer) input.get("numberOfGuests"),
                 (String) input.get("specialRequests")
         );
-        return bookingService.create(request).getData();
+        return bookingService.create(request);
     }
 
     @DgsMutation
     public BookingResponse updateBooking(@InputArgument Long id, @InputArgument("input") Map<String, Object> input) {
-        BookingResponse existing = bookingService.findById(id).getData();
+        BookingResponse existing = bookingService.findById(id);
         BookingRequest request = new BookingRequest(
                 input.containsKey("guestName") ? (String) input.get("guestName") : existing.guestName(),
                 input.containsKey("phoneNumber") ? (String) input.get("phoneNumber") : existing.phoneNumber(),
@@ -79,7 +70,7 @@ public class BookingDataFetcher {
                 input.containsKey("numberOfGuests") ? (Integer) input.get("numberOfGuests") : existing.numberOfGuests(),
                 input.containsKey("specialRequests") ? (String) input.get("specialRequests") : existing.specialRequests()
         );
-        return bookingService.update(id, request).getData();
+        return bookingService.update(id, request);
     }
 
     @DgsMutation
@@ -90,22 +81,22 @@ public class BookingDataFetcher {
 
     @DgsMutation
     public BookingResponse confirmBooking(@InputArgument Long id) {
-        return bookingService.confirmBooking(id).getData();
+        return bookingService.confirmBooking(id);
     }
 
     @DgsMutation
     public BookingResponse cancelBooking(@InputArgument Long id) {
-        return bookingService.cancelBooking(id).getData();
+        return bookingService.cancelBooking(id);
     }
 
     @DgsMutation
     public BookingResponse completeBooking(@InputArgument Long id) {
-        return bookingService.completeBooking(id).getData();
+        return bookingService.completeBooking(id);
     }
 
     @DgsData(parentType = "Booking", field = "table")
     public TableResponse table(DataFetchingEnvironment dfe) {
         BookingResponse booking = dfe.getSource();
-        return tableService.findById(booking.tableId()).getData();
+        return tableService.findById(booking.tableId());
     }
 }
