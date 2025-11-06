@@ -38,6 +38,9 @@ public class BookingEventListener {
 
         try {
             if (event instanceof BookingCreatedEvent created) {
+                if (created.getBookingId() == null) {
+                    throw new IllegalArgumentException("Booking ID cannot be null for BookingCreatedEvent");
+                }
                 sendBookingConfirmationEmail(created);
             } else if (event instanceof BookingConfirmedEvent confirmed) {
                 sendBookingConfirmedSMS(confirmed);
