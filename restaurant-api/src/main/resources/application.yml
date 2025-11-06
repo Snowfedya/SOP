@@ -15,16 +15,12 @@ springdoc:
 dgs:
   graphql:
     path: /graphql
-    schema-locations: "classpath:graphql/schema.graphqls"
     schema-json:
       enabled: true
       path: /schema.json
     graphiql:
       enabled: true
       path: /graphiql
-    cors:
-      allowed-origins: "*"
-      allowed-methods: "GET,POST"
 
 logging:
   level:

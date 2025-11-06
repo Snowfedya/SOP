@@ -94,7 +94,7 @@ public class BookingController implements BookingApi {
             @PathVariable Long tableId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<BookingResponse> pagedResponse = bookingService.findByTableId(tableId, page, size);
+        PagedResponse<BookingResponse> pagedResponse = bookingService.findAllByTableId(tableId, page, size);
         return new PagedResponse<>(
                 pagedResponse.getContent().stream().map(bookingResponseAssembler::toApiResponse).collect(Collectors.toList()),
                 pagedResponse.getPage()

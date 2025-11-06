@@ -4,6 +4,8 @@ import edu.restaurant.api.storage.InMemoryStorage;
 import edu.restaurant.contract.dto.*;
 import edu.restaurant.contract.exception.BookingConflictException;
 import edu.restaurant.contract.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -12,6 +14,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class BookingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
     
     private final InMemoryStorage storage;
     private final TableService tableService;
@@ -147,15 +151,16 @@ public class BookingService {
         }
     }
 
-    public PagedResponse<BookingResponse> findByTableId(Long tableId, int page, int size) {
-        List<BookingResponse> all = storage.bookings.values().stream()
+    public PagedResponse<BookingResponse> findAllByTableId(Long tableId, int page, int size) {
+        log.debug("Finding bookings for table: {}, page: {}, size: {}", tableId, page, size);
+        List<BookingResponse> allForTable = storage.bookings.values().stream()
                 .filter(b -> b.tableId().equals(tableId))
                 .collect(Collectors.toList());
 
         int from = Math.max(0, page * size);
-        int to = Math.min(all.size(), from + size);
-        List<BookingResponse> pageContent = all.subList(from, to);
-        long totalElements = all.size();
+        int to = Math.min(allForTable.size(), from + size);
+        List<BookingResponse> pageContent = allForTable.subList(from, to);
+        long totalElements = allForTable.size();
         long totalPages = (long) Math.ceil((double) totalElements / size);
 
         return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
