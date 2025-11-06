@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -24,30 +24,7 @@
         <java.version>17</java.version>
         <springdoc.version>2.3.0</springdoc.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <dgs.version>8.5.6</dgs.version>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <!-- Явно фиксируем версию Jackson -->
-            <dependency>
-                <groupId>com.fasterxml.jackson</groupId>
-                <artifactId>jackson-bom</artifactId>
-                <version>2.17.0</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- DGS Platform Dependencies -->
-            <dependency>
-                <groupId>com.netflix.graphql.dgs</groupId>
-                <artifactId>graphql-dgs-platform-dependencies</artifactId>
-                <version>${dgs.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -85,16 +62,6 @@
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- GraphQL DGS -->
-        <dependency>
-            <groupId>com.netflix.graphql.dgs</groupId>
-            <artifactId>graphql-dgs-spring-boot-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.netflix.graphql.dgs</groupId>
-            <artifactId>graphql-dgs-subscriptions-websockets-autoconfigure</artifactId>
-        </dependency>
 
         <!-- Jackson уже включен в spring-boot-starter-web, но явно для ясности -->
         <dependency>
@@ -113,20 +80,21 @@
             <artifactId>restaurant-contract</artifactId>
             <version>1.0.0</version>
         </dependency>
+
+        <!-- Встроенная БД -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok for annotations -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
-    <!-- Встроенная БД -->
-    <dependency>
-        <groupId>com.h2database</groupId>
-        <artifactId>h2</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-
-
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-
 
     <build>
         <plugins>

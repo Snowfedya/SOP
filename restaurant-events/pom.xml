@@ -10,20 +10,13 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>restaurant-contract</artifactId>
+    <artifactId>restaurant-events</artifactId>
     <packaging>jar</packaging>
 
-    <name>Restaurant Booking Contract</name>
-    <description>Contract-first API definitions for Restaurant Booking System</description>
+    <name>Restaurant Events</name>
+    <description>Domain events for the restaurant booking system</description>
 
     <dependencies>
-        <!-- Jakarta Validation -->
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-        </dependency>
-
-        <!-- Jackson for serialization -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>

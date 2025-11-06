@@ -1,79 +1,88 @@
 package edu.restaurant.api.controllers;
 
-import edu.restaurant.api.assemblers.TableModelAssembler;
+import edu.restaurant.api.assemblers.TableResponseAssembler;
 import edu.restaurant.api.services.TableService;
 import edu.restaurant.contract.dto.*;
 import edu.restaurant.contract.endpoints.TableApi;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.web.PagedResourcesAssembler;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/tables")
 public class TableController implements TableApi {
 
-    private final TableService service;
-    private final TableModelAssembler assembler;
-    private final PagedResourcesAssembler<TableResponse> pagedAssembler;
+    private final TableService tableService;
+    private final TableResponseAssembler tableResponseAssembler;
 
-    public TableController(TableService service, TableModelAssembler assembler,
-                           PagedResourcesAssembler<TableResponse> pagedAssembler) {
-        this.service = service;
-        this.assembler = assembler;
-        this.pagedAssembler = pagedAssembler;
+    public TableController(TableService tableService, TableResponseAssembler tableResponseAssembler) {
+        this.tableService = tableService;
+        this.tableResponseAssembler = tableResponseAssembler;
     }
 
+    @PostMapping
     @Override
-    public ResponseEntity<EntityModel<TableResponse>> createTable(TableRequest tableRequest) {
-        TableResponse created = service.create(tableRequest);
-        EntityModel<TableResponse> model = assembler.toModel(created);
-        return ResponseEntity.created(model.getRequiredLink("self").toUri()).body(model);
+    public ResponseEntity<ApiResponse<TableResponse>> createTable(@Valid @RequestBody TableRequest tableRequest) {
+        TableResponse createdTable = tableService.create(tableRequest);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdTable.id())
+                .toUri();
+        return ResponseEntity.created(location).body(tableResponseAssembler.toApiResponse(createdTable));
     }
 
+    @GetMapping("/{id}")
     @Override
-    public EntityModel<TableResponse> getTable(Long id) {
-        return assembler.toModel(service.findById(id));
+    public ApiResponse<TableResponse> getTable(@PathVariable Long id) {
+        return tableResponseAssembler.toApiResponse(tableService.findById(id));
     }
 
+    @PutMapping("/{id}")
     @Override
-    public EntityModel<TableResponse> updateTable(Long id, TableRequest tableRequest) {
-        return assembler.toModel(service.update(id, tableRequest));
+    public ApiResponse<TableResponse> updateTable(@PathVariable Long id, @Valid @RequestBody TableRequest tableRequest) {
+        return tableResponseAssembler.toApiResponse(tableService.update(id, tableRequest));
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Override
-    public void deleteTable(Long id) {
-        service.delete(id);
+    public void deleteTable(@PathVariable Long id) {
+        tableService.delete(id);
     }
 
+    @GetMapping
     @Override
-    public PagedModel<EntityModel<TableResponse>> getAllTables(TableStatus status, Integer minCapacity,
-                                                                 String location, int page, int size) {
-        PagedResponse<TableResponse> pagedResponse = service.findAll(status, minCapacity, location, page, size);
-        Page<TableResponse> tablePage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
+    public PagedResponse<ApiResponse<TableResponse>> getAllTables(
+            @RequestParam(required = false) TableStatus status,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) String location,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedResponse<TableResponse> pagedResponse = tableService.findAll(status, minCapacity, location, page, size);
+        return new PagedResponse<>(
+                pagedResponse.getContent().stream().map(tableResponseAssembler::toApiResponse).collect(Collectors.toList()),
+                pagedResponse.getPage()
         );
-        return pagedAssembler.toModel(tablePage, assembler);
     }
 
+    @GetMapping("/available")
     @Override
-    public PagedModel<EntityModel<TableResponse>> getAvailableTables(String dateTime, Integer minCapacity,
-                                                                       int page, int size) {
+    public PagedResponse<ApiResponse<TableResponse>> getAvailableTables(
+            @RequestParam String dateTime,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         LocalDateTime dt = LocalDateTime.parse(dateTime);
-        PagedResponse<TableResponse> pagedResponse = service.findAvailableTables(dt, minCapacity, page, size);
-        Page<TableResponse> tablePage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
+        PagedResponse<TableResponse> pagedResponse = tableService.findAvailableTables(dt, minCapacity, page, size);
+        return new PagedResponse<>(
+                pagedResponse.getContent().stream().map(tableResponseAssembler::toApiResponse).collect(Collectors.toList()),
+                pagedResponse.getPage()
         );
-        return pagedAssembler.toModel(tablePage, assembler);
     }
 }

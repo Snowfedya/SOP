@@ -1,91 +1,103 @@
 package edu.restaurant.api.controllers;
 
-import edu.restaurant.api.assemblers.BookingModelAssembler;
+import edu.restaurant.api.assemblers.BookingResponseAssembler;
 import edu.restaurant.api.services.BookingService;
 import edu.restaurant.contract.dto.*;
 import edu.restaurant.contract.endpoints.BookingApi;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.web.PagedResourcesAssembler;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.PagedModel;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
 public class BookingController implements BookingApi {
 
-    private final BookingService service;
-    private final BookingModelAssembler assembler;
-    private final PagedResourcesAssembler<BookingResponse> pagedAssembler;
+    private final BookingService bookingService;
+    private final BookingResponseAssembler bookingResponseAssembler;
 
-    public BookingController(BookingService service, BookingModelAssembler assembler,
-                            PagedResourcesAssembler<BookingResponse> pagedAssembler) {
-        this.service = service;
-        this.assembler = assembler;
-        this.pagedAssembler = pagedAssembler;
+    public BookingController(BookingService bookingService, BookingResponseAssembler bookingResponseAssembler) {
+        this.bookingService = bookingService;
+        this.bookingResponseAssembler = bookingResponseAssembler;
     }
 
+    @PostMapping
     @Override
-    public ResponseEntity<EntityModel<BookingResponse>> createBooking(BookingRequest bookingRequest) {
-        BookingResponse created = service.create(bookingRequest);
-        EntityModel<BookingResponse> model = assembler.toModel(created);
-        return ResponseEntity.created(model.getRequiredLink("self").toUri()).body(model);
+    public ResponseEntity<ApiResponse<BookingResponse>> createBooking(@Valid @RequestBody BookingRequest bookingRequest) {
+        BookingResponse createdBooking = bookingService.create(bookingRequest);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdBooking.id())
+                .toUri();
+        return ResponseEntity.created(location).body(bookingResponseAssembler.toApiResponse(createdBooking));
     }
 
+    @GetMapping("/{id}")
     @Override
-    public EntityModel<BookingResponse> getBooking(Long id) {
-        return assembler.toModel(service.findById(id));
+    public ApiResponse<BookingResponse> getBooking(@PathVariable Long id) {
+        return bookingResponseAssembler.toApiResponse(bookingService.findById(id));
     }
 
+    @PutMapping("/{id}")
     @Override
-    public EntityModel<BookingResponse> updateBooking(Long id, BookingRequest bookingRequest) {
-        return assembler.toModel(service.update(id, bookingRequest));
+    public ApiResponse<BookingResponse> updateBooking(@PathVariable Long id, @Valid @RequestBody BookingRequest bookingRequest) {
+        return bookingResponseAssembler.toApiResponse(bookingService.update(id, bookingRequest));
     }
 
+    @PatchMapping("/{id}/cancel")
     @Override
-    public EntityModel<BookingResponse> cancelBooking(Long id) {
-        return assembler.toModel(service.cancelBooking(id));
+    public ApiResponse<BookingResponse> cancelBooking(@PathVariable Long id) {
+        return bookingResponseAssembler.toApiResponse(bookingService.cancelBooking(id));
     }
 
+    @PatchMapping("/{id}/confirm")
     @Override
-    public EntityModel<BookingResponse> confirmBooking(Long id) {
-        return assembler.toModel(service.confirmBooking(id));
+    public ApiResponse<BookingResponse> confirmBooking(@PathVariable Long id) {
+        return bookingResponseAssembler.toApiResponse(bookingService.confirmBooking(id));
     }
 
+    @PatchMapping("/{id}/complete")
     @Override
-    public EntityModel<BookingResponse> completeBooking(Long id) {
-        return assembler.toModel(service.completeBooking(id));
+    public ApiResponse<BookingResponse> completeBooking(@PathVariable Long id) {
+        return bookingResponseAssembler.toApiResponse(bookingService.completeBooking(id));
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     @Override
-    public void deleteBooking(Long id) {
-        service.delete(id);
+    public void deleteBooking(@PathVariable Long id) {
+        bookingService.delete(id);
     }
 
+    @GetMapping
     @Override
-    public PagedModel<EntityModel<BookingResponse>> getAllBookings(String guestName, String phoneNumber,
-                                                                     Long tableId, BookingStatus status,
-                                                                     int page, int size) {
-        PagedResponse<BookingResponse> pagedResponse = service.findAll(guestName, phoneNumber, tableId, status, page, size);
-        Page<BookingResponse> bookingPage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
+    public PagedResponse<ApiResponse<BookingResponse>> getAllBookings(
+            @RequestParam(required = false) String guestName,
+            @RequestParam(required = false) String phoneNumber,
+            @RequestParam(required = false) Long tableId,
+            @RequestParam(required = false) BookingStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedResponse<BookingResponse> pagedResponse = bookingService.findAll(guestName, phoneNumber, tableId, status, page, size);
+        return new PagedResponse<>(
+                pagedResponse.getContent().stream().map(bookingResponseAssembler::toApiResponse).collect(Collectors.toList()),
+                pagedResponse.getPage()
         );
-        return pagedAssembler.toModel(bookingPage, assembler);
     }
 
+    @GetMapping("/table/{tableId}")
     @Override
-    public PagedModel<EntityModel<BookingResponse>> getBookingsByTable(Long tableId, int page, int size) {
-        PagedResponse<BookingResponse> pagedResponse = service.findByTableId(tableId, page, size);
-        Page<BookingResponse> bookingPage = new PageImpl<>(
-                pagedResponse.content(),
-                PageRequest.of(pagedResponse.pageNumber(), pagedResponse.pageSize()),
-                pagedResponse.totalElements()
+    public PagedResponse<ApiResponse<BookingResponse>> getBookingsByTable(
+            @PathVariable Long tableId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedResponse<BookingResponse> pagedResponse = bookingService.findAllByTableId(tableId, page, size);
+        return new PagedResponse<>(
+                pagedResponse.getContent().stream().map(bookingResponseAssembler::toApiResponse).collect(Collectors.toList()),
+                pagedResponse.getPage()
         );
-        return pagedAssembler.toModel(bookingPage, assembler);
     }
 }

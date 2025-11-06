@@ -29,10 +29,10 @@ public class TableService {
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
         List<TableResponse> pageContent = all.subList(from, to);
-        int totalPages = (int) Math.ceil((double) all.size() / size);
-        boolean last = page >= totalPages - 1;
+        long totalElements = all.size();
+        long totalPages = (long) Math.ceil((double) totalElements / size);
 
-        return new PagedResponse<>(pageContent, page, size, all.size(), totalPages, last);
+        return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
     }
 
     public TableResponse findById(Long id) {
@@ -113,10 +113,10 @@ public class TableService {
         int from = Math.max(0, page * size);
         int to = Math.min(all.size(), from + size);
         List<TableResponse> pageContent = all.subList(from, to);
-        int totalPages = (int) Math.ceil((double) all.size() / size);
-        boolean last = page >= totalPages - 1;
+        long totalElements = all.size();
+        long totalPages = (long) Math.ceil((double) totalElements / size);
 
-        return new PagedResponse<>(pageContent, page, size, all.size(), totalPages, last);
+        return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
     }
 
     private boolean isTableBookedAtTime(Long tableId, LocalDateTime dateTime) {

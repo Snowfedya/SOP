@@ -8,7 +8,7 @@ import jakarta.validation.Valid;
  */
 public interface BookingApi {
 
-    Object createBooking(@Valid BookingRequest bookingRequest);
+    ApiResponse<BookingResponse> createBooking(@Valid BookingRequest bookingRequest);
 
     ApiResponse<BookingResponse> getBooking(Long id);
 

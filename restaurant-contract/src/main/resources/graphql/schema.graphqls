@@ -1,0 +1,110 @@
+# /restaurant-contract/src/main/resources/graphql/schema.graphqls
+
+"""
+Represents a table in the restaurant.
+"""
+type Table {
+    id: ID!
+    tableNumber: String!
+    capacity: Int!
+    location: String
+    status: TableStatus!
+}
+
+"""
+Represents a booking made by a guest.
+"""
+type Booking {
+    id: ID!
+    guest: Guest!
+    table: Table!
+    bookingDateTime: String!
+    numberOfGuests: Int!
+    status: BookingStatus!
+    specialRequests: String
+}
+
+"""
+Represents a guest who made a booking.
+"""
+type Guest {
+    guestName: String!
+    phoneNumber: String!
+    email: String
+}
+
+"""
+Enum for table status.
+"""
+enum TableStatus {
+    AVAILABLE
+    RESERVED
+    OCCUPIED
+    MAINTENANCE
+}
+
+"""
+Enum for booking status.
+"""
+enum BookingStatus {
+    PENDING
+    CONFIRMED
+    CANCELLED
+    COMPLETED
+    NO_SHOW
+}
+
+"""
+Input for creating or updating a table.
+"""
+input TableInput {
+    tableNumber: String!
+    capacity: Int!
+    location: String
+    status: TableStatus
+}
+
+"""
+Input for creating a booking.
+"""
+input BookingInput {
+    guestName: String!
+    phoneNumber: String!
+    email: String
+    tableId: ID!
+    bookingDateTime: String!
+    numberOfGuests: Int!
+    specialRequests: String
+}
+
+"""
+Wrapper for paginated responses.
+"""
+type PageInfo {
+    totalPages: Int!
+    totalElements: Int!
+    currentPage: Int!
+    pageSize: Int!
+}
+
+type TableConnection {
+    content: [Table!]!
+    pageInfo: PageInfo!
+}
+
+type BookingConnection {
+    content: [Booking!]!
+    pageInfo: PageInfo!
+}
+
+type Query {
+    tables(page: Int = 0, size: Int = 10): TableConnection!
+    bookings(page: Int = 0, size: Int = 10): BookingConnection!
+    table(id: ID!): Table
+    booking(id: ID!): Booking
+}
+
+type Mutation {
+    createTable(input: TableInput!): Table!
+    createBooking(input: BookingInput!): Booking!
+}
