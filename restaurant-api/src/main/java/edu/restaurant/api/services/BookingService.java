@@ -1,168 +1,111 @@
 package edu.restaurant.api.services;
 
-import edu.restaurant.api.storage.InMemoryStorage;
-import edu.restaurant.contract.dto.*;
-import edu.restaurant.contract.exception.BookingConflictException;
+import edu.restaurant.api.models.Booking;
+import edu.restaurant.api.models.Guest;
+import edu.restaurant.api.models.RestaurantTable;
+import edu.restaurant.api.repository.BookingRepository;
+import edu.restaurant.api.repository.RestaurantTableRepository;
+import edu.restaurant.contract.dto.BookingRequest;
+import edu.restaurant.contract.dto.BookingResponse;
+import edu.restaurant.contract.dto.PagedResponse;
 import edu.restaurant.contract.exception.ResourceNotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class BookingService {
 
-    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
-    
-    private final InMemoryStorage storage;
-    private final TableService tableService;
+    private final BookingRepository bookingRepository;
+    private final RestaurantTableRepository tableRepository;
+    private final EventPublishingService eventPublisher;
 
-    public BookingService(InMemoryStorage storage, TableService tableService) {
-        this.storage = storage;
-        this.tableService = tableService;
+    @Transactional(readOnly = true)
+    public PagedResponse<BookingResponse> findAll(int page, int size) {
+        Page<Booking> bookingPage = bookingRepository.findAll(PageRequest.of(page, size));
+        return new PagedResponse<>(
+                bookingPage.getContent().stream().map(this::toResponse).toList(),
+                new PagedResponse.PageMetadata(
+                        bookingPage.getSize(),
+                        bookingPage.getTotalElements(),
+                        bookingPage.getTotalPages(),
+                        bookingPage.getNumber()
+                )
+        );
     }
 
-    public PagedResponse<BookingResponse> findAll(String guestName, String phoneNumber, Long tableId,
-                                                   BookingStatus status, int page, int size) {
-        List<BookingResponse> all = storage.bookings.values().stream()
-                .filter(b -> guestName == null || b.guestName().toLowerCase().contains(guestName.toLowerCase()))
-                .filter(b -> phoneNumber == null || b.phoneNumber().contains(phoneNumber))
-                .filter(b -> tableId == null || b.tableId().equals(tableId))
-                .filter(b -> status == null || b.status() == status)
-                .collect(Collectors.toList());
-
-        int from = Math.max(0, page * size);
-        int to = Math.min(all.size(), from + size);
-        List<BookingResponse> pageContent = all.subList(from, to);
-        long totalElements = all.size();
-        long totalPages = (long) Math.ceil((double) totalElements / size);
-
-        return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
-    }
-
+    @Transactional(readOnly = true)
     public BookingResponse findById(Long id) {
-        BookingResponse booking = storage.bookings.get(id);
-        if (booking == null) {
-            throw new ResourceNotFoundException("Booking not found with id: " + id, "Booking", id);
-        }
-        return booking;
+        return bookingRepository.findById(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found", "Booking", id));
     }
 
     public BookingResponse create(BookingRequest request) {
-        // Проверяем существование столика
-        tableService.findById(request.tableId());
+        RestaurantTable table = tableRepository.findById(request.tableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Table not found", "Table", request.tableId()));
         
-        // Проверяем конфликт бронирований
-        checkBookingConflict(request.tableId(), request.bookingDateTime(), null);
+        Guest guest = new Guest();
+        guest.setGuestName(request.guestName());
+        guest.setPhoneNumber(request.phoneNumber());
+        guest.setEmail(request.email());
 
-        Long id = storage.bookingSequence.incrementAndGet();
-        BookingResponse created = new BookingResponse(
-                id,
-                request.guestName(),
-                request.phoneNumber(),
-                request.email(),
-                request.tableId(),
-                request.bookingDateTime(),
-                request.numberOfGuests(),
-                request.specialRequests(),
-                BookingStatus.PENDING,
-                LocalDateTime.now()
+        Booking booking = new Booking();
+        booking.setGuest(guest);
+        booking.setTable(table);
+        booking.setBookingDateTime(request.bookingDateTime());
+        booking.setNumberOfGuests(request.numberOfGuests());
+        booking.setSpecialRequests(request.specialRequests());
+        booking.setStatus(edu.restaurant.contract.dto.BookingStatus.PENDING);
+
+        Booking saved = bookingRepository.save(booking);
+        BookingResponse response = toResponse(saved);
+        eventPublisher.publishBookingCreated(response);
+        return response;
+    }
+
+    public BookingResponse confirm(Long id) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking not found", "Booking", id));
+        
+        booking.confirm();
+        Booking saved = bookingRepository.save(booking);
+        
+        BookingResponse response = toResponse(saved);
+        eventPublisher.publishBookingConfirmed(id);
+
+        return response;
+    }
+
+    public BookingResponse cancel(Long id) {
+        Booking booking = bookingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Booking not found", "Booking", id));
+
+        booking.cancel();
+        Booking saved = bookingRepository.save(booking);
+
+        BookingResponse response = toResponse(saved);
+        eventPublisher.publishBookingCancelled(id, "Cancelled by user");
+        
+        return response;
+    }
+
+    private BookingResponse toResponse(Booking booking) {
+        return new BookingResponse(
+                booking.getId(),
+                booking.getGuest().getGuestName(),
+                booking.getGuest().getPhoneNumber(),
+                booking.getGuest().getGuestName(),
+                booking.getTable().getId(),
+                booking.getBookingDateTime(),
+                booking.getNumberOfGuests(),
+                booking.getSpecialRequests(),
+                booking.getStatus(),
+                booking.getCreatedAt()
         );
-        storage.bookings.put(id, created);
-        return created;
-    }
-
-    public BookingResponse update(Long id, BookingRequest request) {
-        BookingResponse existing = findById(id);
-        
-        // Проверяем существование столика
-        tableService.findById(request.tableId());
-        
-        // Проверяем конфликт бронирований (исключая текущее)
-        checkBookingConflict(request.tableId(), request.bookingDateTime(), id);
-
-        BookingResponse updated = new BookingResponse(
-                id,
-                request.guestName(),
-                request.phoneNumber(),
-                request.email(),
-                request.tableId(),
-                request.bookingDateTime(),
-                request.numberOfGuests(),
-                request.specialRequests(),
-                existing.status(),
-                existing.createdAt()
-        );
-        storage.bookings.put(id, updated);
-        return updated;
-    }
-
-    public void delete(Long id) {
-        findById(id);
-        storage.bookings.remove(id);
-    }
-
-    public BookingResponse confirmBooking(Long id) {
-        return updateBookingStatus(id, BookingStatus.CONFIRMED);
-    }
-
-    public BookingResponse cancelBooking(Long id) {
-        return updateBookingStatus(id, BookingStatus.CANCELLED);
-    }
-
-    public BookingResponse completeBooking(Long id) {
-        return updateBookingStatus(id, BookingStatus.COMPLETED);
-    }
-
-    private BookingResponse updateBookingStatus(Long id, BookingStatus newStatus) {
-        BookingResponse existing = findById(id);
-        BookingResponse updated = new BookingResponse(
-                existing.id(),
-                existing.guestName(),
-                existing.phoneNumber(),
-                existing.email(),
-                existing.tableId(),
-                existing.bookingDateTime(),
-                existing.numberOfGuests(),
-                existing.specialRequests(),
-                newStatus,
-                existing.createdAt()
-        );
-        storage.bookings.put(id, updated);
-        return updated;
-    }
-
-    private void checkBookingConflict(Long tableId, LocalDateTime dateTime, Long excludeBookingId) {
-        boolean hasConflict = storage.bookings.values().stream()
-                .filter(b -> excludeBookingId == null || !b.id().equals(excludeBookingId))
-                .filter(b -> b.tableId().equals(tableId))
-                .filter(b -> b.status() == BookingStatus.CONFIRMED || b.status() == BookingStatus.PENDING)
-                .anyMatch(b -> Math.abs(java.time.Duration.between(b.bookingDateTime(), dateTime).toHours()) < 2);
-        
-        if (hasConflict) {
-            throw new BookingConflictException(
-                "Table is already booked at this time",
-                tableId,
-                dateTime.toString()
-            );
-        }
-    }
-
-    public PagedResponse<BookingResponse> findAllByTableId(Long tableId, int page, int size) {
-        log.debug("Finding bookings for table: {}, page: {}, size: {}", tableId, page, size);
-        List<BookingResponse> allForTable = storage.bookings.values().stream()
-                .filter(b -> b.tableId().equals(tableId))
-                .collect(Collectors.toList());
-
-        int from = Math.max(0, page * size);
-        int to = Math.min(allForTable.size(), from + size);
-        List<BookingResponse> pageContent = allForTable.subList(from, to);
-        long totalElements = allForTable.size();
-        long totalPages = (long) Math.ceil((double) totalElements / size);
-
-        return new PagedResponse<>(pageContent, new PagedResponse.PageMetadata(size, totalElements, totalPages, page));
     }
 }

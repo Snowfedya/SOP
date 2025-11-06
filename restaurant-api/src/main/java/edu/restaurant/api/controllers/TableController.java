@@ -59,27 +59,9 @@ public class TableController implements TableApi {
     @GetMapping
     @Override
     public PagedResponse<ApiResponse<TableResponse>> getAllTables(
-            @RequestParam(required = false) TableStatus status,
-            @RequestParam(required = false) Integer minCapacity,
-            @RequestParam(required = false) String location,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<TableResponse> pagedResponse = tableService.findAll(status, minCapacity, location, page, size);
-        return new PagedResponse<>(
-                pagedResponse.getContent().stream().map(tableResponseAssembler::toApiResponse).collect(Collectors.toList()),
-                pagedResponse.getPage()
-        );
-    }
-
-    @GetMapping("/available")
-    @Override
-    public PagedResponse<ApiResponse<TableResponse>> getAvailableTables(
-            @RequestParam String dateTime,
-            @RequestParam(required = false) Integer minCapacity,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        LocalDateTime dt = LocalDateTime.parse(dateTime);
-        PagedResponse<TableResponse> pagedResponse = tableService.findAvailableTables(dt, minCapacity, page, size);
+        PagedResponse<TableResponse> pagedResponse = tableService.findAll(page, size);
         return new PagedResponse<>(
                 pagedResponse.getContent().stream().map(tableResponseAssembler::toApiResponse).collect(Collectors.toList()),
                 pagedResponse.getPage()

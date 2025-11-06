@@ -22,6 +22,15 @@ dgs:
       enabled: true
       path: /graphiql
 
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    publisher-confirms: true
+    publisher-returns: true
+
 logging:
   level:
     edu.restaurant: DEBUG

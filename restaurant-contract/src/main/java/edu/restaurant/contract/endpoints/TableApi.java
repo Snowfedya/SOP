@@ -17,16 +17,6 @@ public interface TableApi {
     void deleteTable(Long id);
 
     PagedResponse<ApiResponse<TableResponse>> getAllTables(
-            TableStatus status,
-            Integer minCapacity,
-            String location,
-            int page,
-            int size
-    );
-
-    PagedResponse<ApiResponse<TableResponse>> getAvailableTables(
-            String dateTime,
-            Integer minCapacity,
             int page,
             int size
     );
