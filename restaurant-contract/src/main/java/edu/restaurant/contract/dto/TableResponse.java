@@ -8,18 +8,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record TableResponse(
         @JsonProperty("id")
         Long id,
-        
+
         @JsonProperty("tableNumber")
         String tableNumber,
-        
+
         @JsonProperty("capacity")
         Integer capacity,
-        
+
         @JsonProperty("location")
         String location,
-        
+
         @JsonProperty("status")
-        TableStatus status
+        TableStatus status,
+
+        @JsonProperty("genre")
+        String genre
 ) {
     public Long getId() {
         return id;

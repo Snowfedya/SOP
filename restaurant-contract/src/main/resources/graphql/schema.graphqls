@@ -9,6 +9,7 @@ type Table {
     capacity: Int!
     location: String
     status: TableStatus!
+    genre: String # NEW: e.g., "Романтический", "Семейный"
 }
 
 """
@@ -62,6 +63,7 @@ input TableInput {
     capacity: Int!
     location: String
     status: TableStatus
+    genre: String # NEW
 }
 
 """
@@ -98,7 +100,13 @@ type BookingConnection {
 }
 
 type Query {
-    tables(page: Int = 0, size: Int = 10): TableConnection!
+    tables(
+        status: String
+        minCapacity: Int
+        genre: String # NEW: Filter by genre
+        page: Int = 0
+        size: Int = 10
+    ): TableConnection!
     bookings(page: Int = 0, size: Int = 10): BookingConnection!
     table(id: ID!): Table
     booking(id: ID!): Booking
@@ -107,4 +115,5 @@ type Query {
 type Mutation {
     createTable(input: TableInput!): Table!
     createBooking(input: BookingInput!): Booking!
+    updateTableGenre(id: ID!, genre: String!): Table
 }

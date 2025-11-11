@@ -30,8 +30,13 @@ spring:
     password: guest
     publisher-confirms: true
     publisher-returns: true
+    publisher-confirm-type: correlated
+    template:
+      mandatory: true
 
 logging:
   level:
     edu.restaurant: DEBUG
     org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{correlationId}] - %msg%n"

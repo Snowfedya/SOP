@@ -23,5 +23,7 @@ public record TableRequest(
         String location,
         
         @NotNull(message = "Статус столика обязателен")
-        TableStatus status
+        TableStatus status,
+
+        String genre
 ) {}

@@ -24,4 +24,6 @@ public class RestaurantTable {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TableStatus status;
+
+    private String genre;
 }
