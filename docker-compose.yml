@@ -5,13 +5,11 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: restaurant-rabbitmq
     ports:
-      - "5672:5672"    # AMQP port
-      - "15672:15672"  # Management UI
+      - "5672:5672"
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -20,9 +18,67 @@ services:
     networks:
       - restaurant-network
 
-volumes:
-  rabbitmq_data:
-    driver: local
+  restaurant-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: restaurant-api
+    container_name: restaurant-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: audit-service
+    container_name: audit-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: notification-service
+    container_name: notification-service
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8082"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   restaurant-network:

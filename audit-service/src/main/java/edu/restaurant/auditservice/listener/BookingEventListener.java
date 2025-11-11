@@ -23,20 +23,7 @@ public class BookingEventListener {
     private static final String QUEUE_NAME = "audit-queue";
     private final Set<Long> processedBookingCreations = Collections.synchronizedSet(new HashSet<>());
 
-    @RabbitListener(
-            bindings = @QueueBinding(
-                    value = @Queue(
-                            name = QUEUE_NAME,
-                            durable = "true",
-                            arguments = {
-                                    @Argument(name = "x-dead-letter-exchange", value = "dlx-exchange"),
-                                    @Argument(name = "x-dead-letter-routing-key", value = "dlq.audit")
-                            }
-                    ),
-                    exchange = @Exchange(name = EXCHANGE_NAME, type = ExchangeTypes.TOPIC, durable = "true"),
-                    key = "booking.created"
-            )
-    )
+    @RabbitListener(queues = QUEUE_NAME)
     public void handleBookingCreated(
             @Payload BookingCreatedEvent event,
             Channel channel,
@@ -69,13 +56,7 @@ public class BookingEventListener {
         }
     }
 
-    @RabbitListener(
-            bindings = @QueueBinding(
-                    value = @Queue(name = "audit-queue.dlq", durable = "true"),
-                    exchange = @Exchange(name = "dlx-exchange", type = ExchangeTypes.TOPIC, durable = "true"),
-                    key = "dlq.audit"
-            )
-    )
+    @RabbitListener(queues = "audit-queue.dlq")
     public void handleDlqMessages(Object failedMessage) {
         log.error("!!! Message in DLQ: {}", failedMessage);
         // Alert ops team, store for manual retry

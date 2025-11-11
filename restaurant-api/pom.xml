@@ -6,10 +6,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.0</version>
-        <relativePath/>
+        <groupId>edu.restaurant</groupId>
+        <artifactId>restaurant-booking-system</artifactId>
+        <version>1.0.0</version>
     </parent>
 
     <groupId>edu.restaurant</groupId>
@@ -152,6 +151,13 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
