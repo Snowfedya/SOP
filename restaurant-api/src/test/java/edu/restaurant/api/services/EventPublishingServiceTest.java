@@ -1,5 +1,6 @@
-package edu.restaurant.api.service;
+package edu.restaurant.api.services;
 
+import edu.restaurant.api.config.RabbitMQConfig;
 import edu.restaurant.contract.dto.BookingResponse;
 import edu.restaurant.contract.dto.BookingStatus;
 import edu.restaurant.events.booking.BookingConfirmedEvent;
@@ -48,8 +49,8 @@ class EventPublishingServiceTest {
 
         // Then - проверяем, что RabbitTemplate вызван с правильными параметрами
         verify(rabbitTemplate).convertAndSend(
-            eq("restaurant-exchange"),
-            eq("booking.created"),
+            eq(RabbitMQConfig.RESTAURANT_EXCHANGE),
+            eq(RabbitMQConfig.BOOKING_CREATED_KEY),
             argThat(event -> {
                 if (event instanceof BookingCreatedEvent created) {
                     return created.getBookingId().equals(1L) &&
@@ -71,8 +72,8 @@ class EventPublishingServiceTest {
 
         // Then
         verify(rabbitTemplate).convertAndSend(
-            eq("restaurant-exchange"),
-            eq("booking.confirmed"),
+            eq(RabbitMQConfig.RESTAURANT_EXCHANGE),
+            eq(RabbitMQConfig.BOOKING_CONFIRMED_KEY),
             argThat(event -> {
                 if (event instanceof BookingConfirmedEvent confirmed) {
                     return confirmed.getBookingId().equals(2L);
@@ -100,8 +101,8 @@ class EventPublishingServiceTest {
             // Then - Capture the MessagePostProcessor and verify it
             ArgumentCaptor<MessagePostProcessor> captor = ArgumentCaptor.forClass(MessagePostProcessor.class);
             verify(rabbitTemplate).convertAndSend(
-                eq("restaurant-exchange"),
-                eq("booking.created"),
+                eq(RabbitMQConfig.RESTAURANT_EXCHANGE),
+                eq(RabbitMQConfig.BOOKING_CREATED_KEY),
                 any(BookingCreatedEvent.class),
                 captor.capture()
             );

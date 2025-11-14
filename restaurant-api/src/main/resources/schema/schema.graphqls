@@ -66,6 +66,7 @@ type Query {
         status: TableStatus
         minCapacity: Int
         location: String
+        genre: String
         page: Int = 0
         size: Int = 10
     ): TablePage
@@ -148,6 +149,7 @@ type Mutation {
     updateTable(id: ID!, input: UpdateTableInput!): Table
     deleteTable(id: ID!): ID
     updateTableStatus(id: ID!, status: TableStatus!): Table
+    updateTableGenre(id: ID!, genre: String!): Table
     
     # Операции с бронированиями
     createBooking(input: BookingInput!): Booking

@@ -4,25 +4,6 @@ server:
 spring:
   application:
     name: restaurant-booking-api
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
-
-dgs:
-  graphql:
-    path: /graphql
-    schema-json:
-      enabled: true
-      path: /schema.json
-    graphiql:
-      enabled: true
-      path: /graphiql
-
-spring:
   rabbitmq:
     host: localhost
     port: 5672
@@ -30,8 +11,18 @@ spring:
     password: guest
     publisher-confirms: true
     publisher-returns: true
+    publisher-confirm-type: correlated
+    template:
+      mandatory: true
+
+dgs:
+  graphql:
+    schema-locations:
+      - "classpath:/schema/*.graphqls"
 
 logging:
   level:
     edu.restaurant: DEBUG
     org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{correlationId}] - %msg%n"

@@ -29,11 +29,7 @@ public class AuditEventListener {
 
     private static final List<AuditRecord> auditLog = Collections.synchronizedList(new ArrayList<>());
 
-    @RabbitListener(bindings = @QueueBinding(
-        value = @Queue(name = "audit-queue", durable = "true"),
-        exchange = @Exchange(name = "restaurant-exchange", type = "topic"),
-        key = "#"  // слушаем ВСЕ события
-    ))
+    @RabbitListener(queues = "audit-queue")
     public void handleAllEvents(Object event, @Header Map<String, ?> headers) {
         Object correlationIdObj = headers.get("X-Correlation-ID");
         String correlationId = correlationIdObj != null ? correlationIdObj.toString() : "unknown";

@@ -6,19 +6,19 @@ WORKDIR /build
 # Копируем весь проект
 COPY . .
 
-# Собираем контрактный модуль
-RUN cd restaurant-contract && mvn clean install -DskipTests
-
-# Собираем API модуль
-RUN cd restaurant-api && mvn clean package -DskipTests
+# Собираем все модули
+RUN mvn clean package -DskipTests
 
 # Этап 2: Runtime
 FROM eclipse-temurin:17-jdk-alpine
 
 WORKDIR /app
 
+# Аргумент для указания, какой сервис запускать
+ARG SERVICE_NAME
+
 # Копируем собранный JAR
-COPY --from=builder /build/restaurant-api/target/restaurant-api-*.jar app.jar
+COPY --from=builder /build/${SERVICE_NAME}/target/${SERVICE_NAME}-*.jar app.jar
 
 EXPOSE 8080
 

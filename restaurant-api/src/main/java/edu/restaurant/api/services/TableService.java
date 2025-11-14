@@ -5,12 +5,19 @@ import edu.restaurant.api.repository.RestaurantTableRepository;
 import edu.restaurant.contract.dto.PagedResponse;
 import edu.restaurant.contract.dto.TableRequest;
 import edu.restaurant.contract.dto.TableResponse;
+import edu.restaurant.contract.dto.TableStatus;
 import edu.restaurant.contract.exception.ResourceNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Transactional
@@ -20,8 +27,24 @@ public class TableService {
     private final RestaurantTableRepository tableRepository;
 
     @Transactional(readOnly = true)
-    public PagedResponse<TableResponse> findAll(int page, int size) {
-        Page<RestaurantTable> tablePage = tableRepository.findAll(PageRequest.of(page, size));
+    public PagedResponse<TableResponse> findAll(String status, Integer minCapacity, String location, String genre, int page, int size) {
+        Specification<RestaurantTable> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (StringUtils.hasText(status)) {
+                predicates.add(cb.equal(root.get("status"), TableStatus.valueOf(status.toUpperCase())));
+            }
+            if (minCapacity != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("capacity"), minCapacity));
+            }
+            if (StringUtils.hasText(location)) {
+                predicates.add(cb.like(root.get("location"), "%" + location + "%"));
+            }
+            if (StringUtils.hasText(genre)) {
+                predicates.add(cb.equal(root.get("genre"), genre));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        Page<RestaurantTable> tablePage = tableRepository.findAll(spec, PageRequest.of(page, size));
         return new PagedResponse<>(
                 tablePage.getContent().stream().map(this::toResponse).toList(),
                 new PagedResponse.PageMetadata(
@@ -31,6 +54,11 @@ public class TableService {
                         tablePage.getNumber()
                 )
         );
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<TableResponse> findAll(int page, int size) {
+        return findAll(null, null, null, null, page, size);
     }
 
     @Transactional(readOnly = true)
@@ -46,6 +74,7 @@ public class TableService {
         table.setCapacity(request.capacity());
         table.setLocation(request.location());
         table.setStatus(request.status());
+        table.setGenre(request.genre());
         RestaurantTable saved = tableRepository.save(table);
         return toResponse(saved);
     }
@@ -57,6 +86,15 @@ public class TableService {
         table.setCapacity(request.capacity());
         table.setLocation(request.location());
         table.setStatus(request.status());
+        table.setGenre(request.genre());
+        RestaurantTable updated = tableRepository.save(table);
+        return toResponse(updated);
+    }
+
+    public TableResponse updateTableGenre(Long id, String genre) {
+        RestaurantTable table = tableRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Table not found", "Table", id));
+        table.setGenre(genre);
         RestaurantTable updated = tableRepository.save(table);
         return toResponse(updated);
     }
@@ -74,7 +112,8 @@ public class TableService {
                 table.getTableNumber(),
                 table.getCapacity(),
                 table.getLocation(),
-                table.getStatus()
+                table.getStatus(),
+                table.getGenre()
         );
     }
 }
